@@ -106,7 +106,7 @@
     function createBox(size) {
         var bodyDef = new b2Dynamics.b2BodyDef();
         bodyDef.type = b2Dynamics.b2Body.b2_dynamicBody;
-        bodyDef.position.x = Math.random() * (w / 2) / SCALE;
+        bodyDef.position.x = Math.random() * w / SCALE;
         bodyDef.position.y = Math.random() * -h / SCALE;
 
         var shape = new b2Shapes.b2PolygonShape();
@@ -120,6 +120,8 @@
 
         var boxBody = world.CreateBody(bodyDef);
         boxBody.CreateFixture(fixDef);
+
+        boxBody.SetAngularVelocity(Math.random() * 10 - 5);
 
         return boxBody;
     }

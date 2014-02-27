@@ -1,4 +1,6 @@
 (function () {
+    'use strict';
+
     var b2Common = Box2D.Common,
         b2Math = Box2D.Common.Math,
         b2Collision = Box2D.Collision,
@@ -10,10 +12,11 @@
 
     var w = window.innerWidth,
         h = window.innerHeight,
-        SCALE = 400, // pixels per metre
+        SCALE = 200, // pixels per metre
         world,
         mouseJoint,
-        boxCount = 20;
+        boxCount = 20,
+        debugOn = false;
 
     function init() {
         // box2d setup
@@ -37,14 +40,15 @@
             div.addEventListener('mousedown', function (e) {
                 addJoint(this, e.pageX, e.pageY);
 
-                window.addEventListener('mousemove', moveJoint);
-
-                window.addEventListener('mouseup', function (e) {
+                var mouseUpEvent = function (e) {
                     destroyJoint();
 
                     window.removeEventListener('mousemove', moveJoint);
-                    window.removeEventListener('mouseup', arguments.callee);
-                });
+                    window.removeEventListener('mouseup', mouseUpEvent);
+                }
+
+                window.addEventListener('mousemove', moveJoint);
+                window.addEventListener('mouseup', mouseUpEvent);
             });
 
             // create b2Body
@@ -56,7 +60,9 @@
         }
 
         // add debug canvas if necessary
-//                addDebugCanvas();
+        if (debugOn) {
+            addDebugCanvas();
+        }
 
         // start rendering
         tick();
@@ -199,7 +205,9 @@
         }
 
         // draw debug data if using debug canvas
-//                world.DrawDebugData();
+        if (debugOn) {
+            world.DrawDebugData();
+        }
 
         requestAnimFrame(tick);
     }

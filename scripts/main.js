@@ -10,7 +10,7 @@
 
     var w = window.innerWidth,
         h = window.innerHeight,
-        SCALE = 40, // pixels per metre
+        SCALE = 400, // pixels per metre
         world,
         mouseJoint,
         boxCount = 20;
@@ -56,7 +56,7 @@
         }
 
         // add debug canvas if necessary
-        //        addDebugCanvas();
+//                addDebugCanvas();
 
         // start rendering
         tick();
@@ -199,7 +199,7 @@
         }
 
         // draw debug data if using debug canvas
-        //        world.DrawDebugData();
+//                world.DrawDebugData();
 
         requestAnimFrame(tick);
     }

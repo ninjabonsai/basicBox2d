@@ -10,11 +10,13 @@
         b2Controllers = Box2D.Dynamics.Controllers,
         b2Joints = Box2D.Dynamics.Joints;
 
+    var isTouchDevice = 'ontouchstart' in document.documentElement;
+
     var w = window.innerWidth,
         h = window.innerHeight,
         SCALE = 200, // pixels per metre
         world,
-        mouseJoint,
+        mouseJointsArray = [],
         boxCount = 20,
         debugOn = false;
 
@@ -22,6 +24,12 @@
         // box2d setup
         world = new b2Dynamics.b2World(new b2Math.b2Vec2(0, 10), true);
         createWallsAndFloor();
+
+        if (isTouchDevice) {
+            document.addEventListener('touchmove', function (e) {
+                e.preventDefault()
+            });
+        }
 
         for (var i = 0; i < boxCount; i++) {
 
@@ -31,24 +39,42 @@
             var size = (Math.random() * 80 | 0) + 10;
 
             div.style.backgroundColor = 'rgb(' + (Math.random() * 255 | 0) + ', ' + (Math.random() * 255 | 0) + ', 0)';
+            div.style.position = 'absolute';
             div.style.width = size + 'px';
             div.style.height = size + 'px';
             div.style.marginTop = -size / 2 + 'px';
             div.style.marginLeft = -size / 2 + 'px';
             document.body.appendChild(div);
 
-            div.addEventListener('mousedown', function (e) {
-                addJoint(this, e.pageX, e.pageY);
+            div.addEventListener(isTouchDevice ? 'touchstart' : 'mousedown', function (e) {
+                e.preventDefault();
+
+                var xPos,
+                    yPos;
+
+                if (!isTouchDevice) {
+                    xPos = e.pageX;
+                    yPos = e.pageY;
+                    addJoint(this, xPos, yPos);
+                } else {
+                    xPos = e.changedTouches[0].pageX;
+                    yPos = e.changedTouches[0].pageY;
+                    addJoint(this, xPos, yPos, e.changedTouches[0]);
+                }
 
                 var mouseUpEvent = function (e) {
-                    destroyJoint();
+                    e.preventDefault();
 
-                    window.removeEventListener('mousemove', moveJoint);
+                    destroyJoint(e);
+
+                    window.removeEventListener('mousemove', moveJoints);
                     window.removeEventListener('mouseup', mouseUpEvent);
                 }
 
-                window.addEventListener('mousemove', moveJoint);
-                window.addEventListener('mouseup', mouseUpEvent);
+                if (!isTouchDevice) {
+                    window.addEventListener('mousemove', moveJoints);
+                    window.addEventListener('mouseup', mouseUpEvent);
+                }
             });
 
             // create b2Body
@@ -57,6 +83,15 @@
 
             // div needs a reference to body for adding mouse joint
             div.body = boxBody;
+        }
+
+        if (isTouchDevice) {
+            window.addEventListener('touchmove', moveJoints);
+            window.addEventListener('touchend', function (e) {
+                e.preventDefault();
+
+                destroyJoint(e);
+            });
         }
 
         // add debug canvas if necessary
@@ -148,7 +183,7 @@
         world.SetDebugDraw(debugDraw);
     }
 
-    function addJoint(div, xPos, yPos) {
+    function addJoint(div, xPos, yPos, currentTouch) {
         var body = div.body;
 
         if (body) {
@@ -157,17 +192,54 @@
             mjd.bodyB = body;
             mjd.target = new b2Math.b2Vec2(xPos / SCALE, yPos / SCALE);
             mjd.maxForce = 10000;
-            mouseJoint = world.CreateJoint(mjd);
+
+            var mj = world.CreateJoint(mjd);
+
+            if (!isTouchDevice) {
+                mouseJointsArray[0] = mj;
+            } else {
+                mouseJointsArray.push(mj);
+            }
+
+            mj.currentTouch = currentTouch;
         }
     }
 
-    function moveJoint(e) {
-        mouseJoint.SetTarget(new b2Math.b2Vec2(e.pageX / SCALE, e.pageY / SCALE));
+    function moveJoints(e) {
+        var xPos,
+            yPos,
+            mjl = mouseJointsArray.length;
+
+        for (var i = 0; i < mjl; i++) {
+            var mj = mouseJointsArray[i];
+
+            if (!isTouchDevice) {
+                xPos = e.pageX;
+                yPos = e.pageY;
+            } else {
+                xPos = mj.currentTouch.pageX;
+                yPos = mj.currentTouch.pageY;
+            }
+
+            mj.SetTarget(new b2Math.b2Vec2(xPos / SCALE, yPos / SCALE));
+        }
     }
 
-    function destroyJoint() {
-        if (mouseJoint) {
-            world.DestroyJoint(mouseJoint);
+    function destroyJoint(e) {
+        if (!isTouchDevice) {
+            if (mouseJointsArray[0]) {
+                world.DestroyJoint(mouseJointsArray[0]);
+            }
+        } else {
+            for (var i = 0; i < mouseJointsArray.length; i++) {
+                var mj = mouseJointsArray[i];
+
+                if (mj.currentTouch === e.changedTouches[0]) {
+                    mj.currentTouch = undefined;
+                    world.DestroyJoint(mj);
+                    mouseJointsArray.splice(i--, 1);
+                }
+            }
         }
     }
 
